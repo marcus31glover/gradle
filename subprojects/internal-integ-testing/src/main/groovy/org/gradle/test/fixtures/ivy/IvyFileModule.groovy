@@ -27,6 +27,7 @@ import org.gradle.test.fixtures.GradleModuleMetadata
 import org.gradle.test.fixtures.Module
 import org.gradle.test.fixtures.ModuleArtifact
 import org.gradle.test.fixtures.file.TestFile
+import org.gradle.test.fixtures.gradle.ArtifactSelectorSpec
 import org.gradle.test.fixtures.gradle.DependencyConstraintSpec
 import org.gradle.test.fixtures.gradle.DependencySpec
 import org.gradle.test.fixtures.gradle.FileSpec
@@ -420,7 +421,8 @@ class IvyFileModule extends AbstractModule implements IvyModule {
                     v.name,
                     v.attributes,
                     v.dependencies + dependencies.collect { d ->
-                        new DependencySpec(d.organisation, d.module, d.revision, d.prefers, d.strictly, d.forSubgraph, d.rejects, d.exclusions, d.inheritConstraints, d.reason, d.attributes)
+                        new DependencySpec(d.organisation, d.module, d.revision, d.prefers, d.strictly, d.forSubgraph, d.rejects, d.exclusions, d.inheritConstraints, d.reason, d.attributes,
+                            d.classifier ? new ArtifactSelectorSpec(d.module, 'jar', 'jar', d.classifier) : null)
                     },
                     v.dependencyConstraints + dependencyConstraints.collect { d ->
                         new DependencyConstraintSpec(d.organisation, d.module, d.revision, d.prefers, d.strictly, d.forSubgraph, d.rejects, d.reason, d.attributes)
@@ -487,6 +489,7 @@ class IvyFileModule extends AbstractModule implements IvyModule {
         }
         builder.dependencies {
             dependencies.each { dep ->
+                def classifier = dep.classifier
                 def depAttrs = [org: dep.organisation, name: dep.module, rev: dep.revision]
                 if (dep.conf) {
                     depAttrs.conf = dep.conf
@@ -506,6 +509,14 @@ class IvyFileModule extends AbstractModule implements IvyModule {
                             }
                             builder.exclude(excludeAttrs)
                         }
+                    }
+                    if (classifier) {
+                        def depArtifactAttrs = [:]
+                        depArtifactAttrs.name = dep.module
+                        depArtifactAttrs.type = 'jar'
+                        depArtifactAttrs.ext = 'jar'
+                        depArtifactAttrs.'m:classifier' = classifier
+                        builder.artifact(depArtifactAttrs)
                     }
                 }
             }
