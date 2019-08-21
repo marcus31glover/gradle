@@ -204,6 +204,13 @@ abstract class AbstractMavenModule extends AbstractModule implements MavenModule
         return this
     }
 
+    /**
+     * Same as {@link #artifact(Map)} since all additional artifacts are undeclared in maven.
+     */
+    MavenModule undeclaredArtifact(Map<String, ?> options) {
+        return artifact(options)
+    }
+
     String getPackaging() {
         return packaging
     }
