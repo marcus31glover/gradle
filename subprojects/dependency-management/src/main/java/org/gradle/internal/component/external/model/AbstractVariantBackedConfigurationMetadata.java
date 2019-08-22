@@ -148,6 +148,11 @@ class AbstractVariantBackedConfigurationMetadata implements ConfigurationMetadat
     }
 
     @Override
+    public boolean requiresMavenArtifactDiscovery() {
+        return false;
+    }
+
+    @Override
     public List<? extends ComponentArtifactMetadata> getArtifacts() {
         return variant.getArtifacts();
     }
