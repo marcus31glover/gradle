@@ -28,14 +28,8 @@ class DependencyMetadataRulesIntegrationTest extends AbstractModuleDependencyRes
     @Override
     String getTestConfiguration() { variantToTest }
 
-    /**
-     * Does the published metadata provide variants with attributes? Eventually all metadata should do that.
-     * For Ivy and Maven POM metadata, the variants and attributes should be derived from configurations and scopes.
-     */
-    boolean getPublishedModulesHaveAttributes() { gradleMetadataPublished }
-
     String getVariantToTest() {
-        if (gradleMetadataPublished || useIvy()) {
+        if (gradleMetadataPublished) {
             'customVariant'
         } else {
             'runtime'
@@ -54,7 +48,7 @@ class DependencyMetadataRulesIntegrationTest extends AbstractModuleDependencyRes
             configurations { $variantToTest { attributes { attribute(Attribute.of('format', String), 'custom') } } }
             
             dependencies {
-                $variantToTest group: 'org.test', name: 'moduleA', version: '1.0' ${publishedModulesHaveAttributes ? "" : ", configuration: '$variantToTest'"}
+                $variantToTest group: 'org.test', name: 'moduleA', version: '1.0'
             }
         """
     }
@@ -714,7 +708,7 @@ class DependencyMetadataRulesIntegrationTest extends AbstractModuleDependencyRes
             configurations { anotherConfiguration { attributes { attribute(Attribute.of('format', String), 'custom') } } }
             
             dependencies {
-                anotherConfiguration group: 'org.test', name: 'moduleA', version: '1.0' ${publishedModulesHaveAttributes ? "" : ", configuration: '$variantToTest'"}
+                anotherConfiguration group: 'org.test', name: 'moduleA', version: '1.0'
             }
 
             dependencies {
@@ -768,7 +762,7 @@ class DependencyMetadataRulesIntegrationTest extends AbstractModuleDependencyRes
             }
 
             dependencies {
-                $variantToTest group: 'org.test', name: 'moduleB', version: '1.1' ${publishedModulesHaveAttributes ? "" : ", configuration: '$variantToTest'"}
+                $variantToTest group: 'org.test', name: 'moduleB', version: '1.1'
  
                 components {
                     withModule('org.test:moduleA', ModifyRule)
@@ -834,7 +828,7 @@ class DependencyMetadataRulesIntegrationTest extends AbstractModuleDependencyRes
             }
 
             dependencies {
-                $variantToTest group: 'org.test', name: 'moduleB', version: '1.1' ${publishedModulesHaveAttributes ? "" : ", configuration: '$variantToTest'"}
+                $variantToTest group: 'org.test', name: 'moduleB', version: '1.1'
  
                 components {
                     withModule('org.test:moduleA', ModifyRule)

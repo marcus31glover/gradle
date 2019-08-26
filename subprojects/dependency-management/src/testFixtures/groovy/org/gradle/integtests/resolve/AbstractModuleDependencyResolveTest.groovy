@@ -41,13 +41,12 @@ abstract class AbstractModuleDependencyResolveTest extends AbstractHttpDependenc
         GradleMetadataResolveRunner.isGradleMetadataPublished()
     }
 
-    boolean usesJavaLibraryVariants() {
-        GradleMetadataResolveRunner.isGradleMetadataPublished() || useMaven()
-    }
-
     String getTestConfiguration() { 'conf' }
 
     String getRootProjectName() { 'test' }
+
+    boolean isAddVariantDerivationRuleForIvy() { useIvy() && !isGradleMetadataPublished() }
+    boolean isVariantDerivationRuleForIvyCacheable() { false }
 
     void resetExpectations() {
         server.resetExpectations()
@@ -146,7 +145,7 @@ abstract class AbstractModuleDependencyResolveTest extends AbstractHttpDependenc
 
     def setup() {
         resolve = new ResolveTestFixture(buildFile, testConfiguration)
-        resolve.expectDefaultConfiguration(usesJavaLibraryVariants() ? "runtime" : "default")
+        resolve.expectDefaultConfiguration("runtime")
         settingsFile << "rootProject.name = '$rootProjectName'"
         resolve.prepare()
         buildFile << """
@@ -158,6 +157,9 @@ abstract class AbstractModuleDependencyResolveTest extends AbstractHttpDependenc
         """
         resolve.addDefaultVariantDerivationStrategy()
         resolve.addJavaEcosystemSchema()
+        if (isAddVariantDerivationRuleForIvy()) {
+            resolve.addIvyJavaEcosystemDerivationRules(variantDerivationRuleForIvyCacheable)
+        }
     }
 
     void repository(@DelegatesTo(RemoteRepositorySpec) Closure<Void> spec) {

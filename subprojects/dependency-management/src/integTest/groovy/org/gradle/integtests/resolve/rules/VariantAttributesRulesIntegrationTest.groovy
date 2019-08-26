@@ -25,17 +25,11 @@ class VariantAttributesRulesIntegrationTest extends AbstractModuleDependencyReso
     @Override
     String getTestConfiguration() { variantToTest }
 
-    /**
-     * Does the published metadata provide variants with attributes? Eventually all metadata should do that.
-     * For Ivy and Maven POM metadata, the variants and attributes should be derived from configurations and scopes.
-     */
-    boolean getPublishedModulesHaveAttributes() { gradleMetadataPublished }
-
     String getVariantToTest() {
         if (gradleMetadataPublished || useIvy()) {
             'customVariant'
         } else {
-            'compile'
+            'compile' // in pure maven, we cannot publish a new variant/configuration
         }
     }
 
@@ -54,13 +48,18 @@ class VariantAttributesRulesIntegrationTest extends AbstractModuleDependencyReso
             configurations { $variantToTest { attributes { attribute(formatAttribute, 'custom') } } }
             
             dependencies {
-                $variantToTest group: 'org.test', name: 'moduleA', version: '1.0' ${publishedModulesHaveAttributes ? "" : ", configuration: '$variantToTest'"}
+                $variantToTest group: 'org.test', name: 'moduleA', version: '1.0'
             }
         """
     }
 
     def "can add attributes"() {
         given:
+        repository {
+            'org.test:moduleB:1.0' {
+                variant 'customVariant', [:]
+            }
+        }
         withDefaultVariantToTest()
         buildFile << """
             class AttributeRule implements ComponentMetadataRule {
@@ -82,18 +81,13 @@ class VariantAttributesRulesIntegrationTest extends AbstractModuleDependencyReso
 
             dependencies {
                 components {
+                    ${isGradleMetadataPublished() ? '' : "withModule('org.test:moduleA', AttributeRule) { params(formatAttribute) }"}
                     withModule('org.test:moduleB', AttributeRule) {
                         params(formatAttribute)
                     }
                 }
             }
         """
-
-        repository {
-            'org.test:moduleB:1.0' {
-                variant 'customVariant', [:]
-            }
-        }
 
         when:
         repositoryInteractions {
@@ -142,6 +136,7 @@ class VariantAttributesRulesIntegrationTest extends AbstractModuleDependencyReso
 
             dependencies {
                 components {
+                    ${isGradleMetadataPublished() ? '' : "withModule('org.test:moduleA', AttributeRule) { params(formatAttribute) }"}
                     withModule('org.test:moduleB', AttributeRule) {
                         params(formatAttribute)
                     }
@@ -221,6 +216,15 @@ class VariantAttributesRulesIntegrationTest extends AbstractModuleDependencyReso
     // artifact attributes
     def "can specify an artifact attribute on a variant to mitigate missing withArtifacts rules"() {
         given:
+        repository {
+            'org.test:moduleB:1.0' {
+                variant('customVariant') {
+                    if (GradleMetadataResolveRunner.isGradleMetadataPublished()) {
+                        artifact 'variant1'
+                    }
+                }
+            }
+        }
         withDefaultVariantToTest()
         buildFile << """
             class AttributeRule implements ComponentMetadataRule {
@@ -251,22 +255,13 @@ class VariantAttributesRulesIntegrationTest extends AbstractModuleDependencyReso
                     }
                 }
                 components {
+                    ${isGradleMetadataPublished() ? '' : "withModule('org.test:moduleA', AttributeRule) { params(formatAttribute) }"}                 
                     withModule('org.test:moduleB', AttributeRule) {
                         params(formatAttribute)
                     }
                 }
             }
         """
-
-        repository {
-            'org.test:moduleB:1.0' {
-                variant('customVariant') {
-                    if (GradleMetadataResolveRunner.isGradleMetadataPublished()) {
-                        artifact 'variant1'
-                    }
-                }
-            }
-        }
 
         when:
         repositoryInteractions {
@@ -313,6 +308,7 @@ class VariantAttributesRulesIntegrationTest extends AbstractModuleDependencyReso
             int cpt
             dependencies {
                 components {
+                    ${isGradleMetadataPublished() ? '' : "withModule('org.test:moduleA') { withVariant('$variantToTest') { attributes { attribute(formatAttribute, 'custom') } } }"}                        
                     withModule('org.test:moduleB') {
                         withVariant("$variantToTest") { 
                             attributes {

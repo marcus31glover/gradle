@@ -31,6 +31,9 @@ import spock.lang.Unroll
 ])
 class IvySpecificComponentMetadataRulesIntegrationTest extends AbstractModuleDependencyResolveTest implements ComponentMetadataRulesSupport {
 
+    @Override
+    boolean isAddVariantDerivationRuleForIvy() { false }
+
     def setup() {
         buildFile <<
             """

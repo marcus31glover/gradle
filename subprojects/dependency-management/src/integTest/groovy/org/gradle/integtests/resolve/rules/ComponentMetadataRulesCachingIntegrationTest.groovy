@@ -26,6 +26,9 @@ class ComponentMetadataRulesCachingIntegrationTest extends AbstractModuleDepende
         GradleMetadataResolveRunner.useIvy() ? 'integration' : 'release'
     }
 
+    @Override
+    boolean isVariantDerivationRuleForIvyCacheable() { true }
+
     def setup() {
         buildFile << """
 dependencies {
