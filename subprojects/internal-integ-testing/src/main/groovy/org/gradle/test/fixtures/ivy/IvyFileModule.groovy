@@ -96,7 +96,6 @@ class IvyFileModule extends AbstractModule implements IvyModule {
         this.m2Compatible = m2Compatible
         configurations['runtime'] = [extendsFrom: [], transitive: true, visibility: 'public']
         configurations['compile'] = [extendsFrom: [], transitive: true, visibility: 'public']
-        configurations['default'] = [extendsFrom: ['compile,runtime'], transitive: true, visibility: 'public']
     }
 
     @Override
@@ -513,14 +512,16 @@ class IvyFileModule extends AbstractModule implements IvyModule {
             def runtimeDependencies = variants.find{ it.name == 'runtime' }?.dependencies
             if (compileDependencies) {
                 compileDependencies.each { dep ->
-                    def depAttrs = [org: dep.group, name: dep.module, rev: dep.version, conf: 'compile->default']
-                    builder.dependency(depAttrs)
+                    def depAttrsApi = [org: dep.group, name: dep.module, rev: dep.version, conf: 'compile->compile']
+                    builder.dependency(depAttrsApi)
+                    def depAttrsRuntime = [org: dep.group, name: dep.module, rev: dep.version, conf: 'runtime->runtime']
+                    builder.dependency(depAttrsRuntime)
                 }
             }
             if (runtimeDependencies) {
                 (runtimeDependencies - compileDependencies).each { dep ->
-                    def depAttrs = [org: dep.group, name: dep.module, rev: dep.version, conf: 'runtime->default']
-                    builder.dependency(depAttrs)
+                    def depAttrsRuntime = [org: dep.group, name: dep.module, rev: dep.version, conf: 'runtime->runtime']
+                    builder.dependency(depAttrsRuntime)
                 }
             }
         }

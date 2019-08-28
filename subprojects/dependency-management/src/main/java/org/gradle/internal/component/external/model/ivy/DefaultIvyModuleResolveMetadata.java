@@ -16,9 +16,11 @@
 package org.gradle.internal.component.external.model.ivy;
 
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.SetMultimap;
 import org.gradle.api.Transformer;
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
 import org.gradle.api.artifacts.component.ModuleComponentSelector;
@@ -29,7 +31,9 @@ import org.gradle.internal.component.external.model.AbstractLazyModuleComponentR
 import org.gradle.internal.component.external.model.DefaultConfigurationMetadata;
 import org.gradle.internal.component.external.model.DefaultModuleComponentSelector;
 import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
+import org.gradle.internal.component.external.model.VariantDerivationStrategy;
 import org.gradle.internal.component.external.model.VariantMetadataRules;
+import org.gradle.internal.component.model.ConfigurationMetadata;
 import org.gradle.internal.component.model.Exclude;
 import org.gradle.internal.component.model.ExcludeMetadata;
 import org.gradle.internal.component.model.ModuleSource;
@@ -38,6 +42,7 @@ import org.gradle.util.CollectionUtils;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * {@link AbstractLazyModuleComponentResolveMetadata Lazy version} of a {@link IvyModuleResolveMetadata}.
@@ -53,6 +58,8 @@ public class DefaultIvyModuleResolveMetadata extends AbstractLazyModuleComponent
     private final String branch;
     // Since a single `Artifact` is shared between configurations, share the metadata type as well.
     private Map<Artifact, ModuleComponentArtifactMetadata> artifacts;
+
+    private ImmutableList<? extends ConfigurationMetadata> derivedVariants;
 
     DefaultIvyModuleResolveMetadata(DefaultMutableIvyModuleResolveMetadata metadata) {
         super(metadata);
@@ -100,6 +107,57 @@ public class DefaultIvyModuleResolveMetadata extends AbstractLazyModuleComponent
         DefaultConfigurationMetadata configuration = new DefaultConfigurationMetadata(componentId, name, transitive, visible, hierarchy, ImmutableList.copyOf(artifacts), componentMetadataRules, excludesForConfiguration, getAttributes().asImmutable());
         configuration.setDependencies(configurationHelper.filterDependencies(configuration));
         return configuration;
+    }
+
+    @Override
+    protected Optional<ImmutableList<? extends ConfigurationMetadata>> maybeDeriveVariants() {
+        if (isJavaLibrary()) {
+            return Optional.fromNullable(getDerivedVariants());
+        } else {
+            return Optional.absent();
+        }
+    }
+
+    private boolean isJavaLibrary() {
+        // Make sure there are only the two configurations
+        // Otherwise, configurations not turned into variants become inaccessible
+        Set<String> configurationNames = getConfigurationNames();
+        if (configurationNames.size() != 2) {
+            return false;
+        }
+        if (!configurationNames.contains("compile")) {
+            return false;
+        }
+        if (!configurationNames.contains("runtime")) {
+            return false;
+        }
+
+        // Make sure the configuration mappings for dependencies are strict
+        // Otherwise, variant selection and direct selection could yield different results
+        for (IvyDependencyDescriptor dep : getDependencies()) {
+            SetMultimap<String, String> confMappings = dep.getConfMappings();
+            for (String conf : confMappings.keySet()) {
+                Set<String> targets = confMappings.get(conf);
+               if (!"compile".equals(conf) && !"runtime".equals(conf)) {
+                   return false;
+               }
+                if (targets.size() != 1) {
+                   return false;
+               }
+               if (!targets.iterator().next().equals(conf)) {
+                   return false;
+               }
+            }
+        }
+        return true;
+    }
+
+    private ImmutableList<? extends ConfigurationMetadata> getDerivedVariants() {
+        VariantDerivationStrategy strategy = getVariantMetadataRules().getVariantDerivationStrategy();
+        if (derivedVariants == null && strategy.derivesVariants()) {
+            derivedVariants = strategy.derive(this);
+        }
+        return derivedVariants;
     }
 
     @Override
