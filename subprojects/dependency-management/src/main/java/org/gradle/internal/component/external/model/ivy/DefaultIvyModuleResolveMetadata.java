@@ -20,7 +20,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.SetMultimap;
 import org.gradle.api.Transformer;
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
 import org.gradle.api.artifacts.component.ModuleComponentSelector;
@@ -119,37 +118,8 @@ public class DefaultIvyModuleResolveMetadata extends AbstractLazyModuleComponent
     }
 
     private boolean isJavaLibrary() {
-        // Make sure there are only the two configurations
-        // Otherwise, configurations not turned into variants become inaccessible
         Set<String> configurationNames = getConfigurationNames();
-        if (configurationNames.size() != 2) {
-            return false;
-        }
-        if (!configurationNames.contains("compile")) {
-            return false;
-        }
-        if (!configurationNames.contains("runtime")) {
-            return false;
-        }
-
-        // Make sure the configuration mappings for dependencies are strict
-        // Otherwise, variant selection and direct selection could yield different results
-        for (IvyDependencyDescriptor dep : getDependencies()) {
-            SetMultimap<String, String> confMappings = dep.getConfMappings();
-            for (String conf : confMappings.keySet()) {
-                Set<String> targets = confMappings.get(conf);
-               if (!"compile".equals(conf) && !"runtime".equals(conf)) {
-                   return false;
-               }
-                if (targets.size() != 1) {
-                   return false;
-               }
-               if (!targets.iterator().next().equals(conf)) {
-                   return false;
-               }
-            }
-        }
-        return true;
+        return configurationNames.contains("compile") && configurationNames.contains("runtime");
     }
 
     private ImmutableList<? extends ConfigurationMetadata> getDerivedVariants() {

@@ -17,6 +17,7 @@
 package org.gradle.api.publish.ivy.internal.publication;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.gradle.api.Action;
 import org.gradle.api.DomainObjectSet;
@@ -85,14 +86,22 @@ import javax.inject.Inject;
 import java.io.File;
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 
 import static org.gradle.api.internal.component.MavenPublishingAwareContext.ScopeMapping.compile;
+import static org.gradle.api.internal.component.MavenPublishingAwareContext.ScopeMapping.compile_optional;
 import static org.gradle.api.internal.component.MavenPublishingAwareContext.ScopeMapping.runtime;
+import static org.gradle.api.internal.component.MavenPublishingAwareContext.ScopeMapping.runtime_optional;
 
 public class DefaultIvyPublication implements IvyPublicationInternal {
 
     private final static Logger LOG = Logging.getLogger(DefaultIvyPublication.class);
+
+    private static final String API_VARIANT = "api";
+    private static final String API_ELEMENTS_VARIANT = "apiElements";
+    private static final String RUNTIME_VARIANT = "runtime";
+    private static final String RUNTIME_ELEMENTS_VARIANT = "runtimeElements";
 
     @VisibleForTesting
     public static final String UNSUPPORTED_FEATURE = " contains dependencies that cannot be represented in a published ivy descriptor.";
@@ -244,6 +253,7 @@ public class DefaultIvyPublication implements IvyPublicationInternal {
     }
 
     private void populateConfigurations() {
+        configurations.maybeCreate("default");
         for (UsageContext usageContext : component.getUsages()) {
             String conf = mapUsageToIvyConfiguration(usageContext);
             configurations.maybeCreate(conf);
@@ -258,12 +268,20 @@ public class DefaultIvyPublication implements IvyPublicationInternal {
     }
 
     private void populateArtifacts() {
-        Set<PublishArtifact> seenArtifacts = Sets.newHashSet();
+        if (artifactsOverridden) {
+            return;
+        }
+        Map<PublishArtifact, IvyArtifact> seenArtifacts = Maps.newHashMap();
         for (UsageContext usageContext : component.getUsages()) {
             String conf = mapUsageToIvyConfiguration(usageContext);
             for (PublishArtifact publishArtifact : usageContext.getArtifacts()) {
-                if (!artifactsOverridden && seenArtifacts.add(publishArtifact)) {
-                    artifact(publishArtifact).setConf(conf);
+                IvyArtifact ivyArtifact = seenArtifacts.get(publishArtifact);
+                if (ivyArtifact == null) {
+                    ivyArtifact = artifact(publishArtifact);
+                    ivyArtifact.setConf(conf);
+                    seenArtifacts.put(publishArtifact, ivyArtifact);
+                } else {
+                    ivyArtifact.setConf(ivyArtifact.getConf() + "," + conf);
                 }
             }
         }
@@ -307,8 +325,11 @@ public class DefaultIvyPublication implements IvyPublicationInternal {
         String confMappingTarget = null;
         if (usageContext instanceof MavenPublishingAwareContext) {
             MavenPublishingAwareContext.ScopeMapping mapping = ((MavenPublishingAwareContext) usageContext).getScopeMapping();
-            if (mapping == compile || mapping == runtime) {
-                confMappingTarget = mapping.name();
+            if (mapping == runtime || mapping == runtime_optional) {
+                confMappingTarget = "runtime";
+            }
+            if (mapping == compile || mapping == compile_optional) {
+                confMappingTarget = "compile";
             }
         }
         if (confMappingTarget == null) {
@@ -337,11 +358,11 @@ public class DefaultIvyPublication implements IvyPublicationInternal {
     }
 
     private String mapUsageToIvyConfiguration(UsageContext usageContext) {
-        if (usageContext instanceof MavenPublishingAwareContext) {
-            MavenPublishingAwareContext.ScopeMapping mapping = ((MavenPublishingAwareContext) usageContext).getScopeMapping();
-            if (mapping == compile || mapping == runtime) {
-                return mapping.name();
-            }
+        if (API_VARIANT.equals(usageContext.getName()) || API_ELEMENTS_VARIANT.equals(usageContext.getName())) {
+            return "compile";
+        }
+        if (RUNTIME_VARIANT.equals(usageContext.getName()) || RUNTIME_ELEMENTS_VARIANT.equals(usageContext.getName())) {
+            return "runtime";
         }
         return usageContext.getName();
     }

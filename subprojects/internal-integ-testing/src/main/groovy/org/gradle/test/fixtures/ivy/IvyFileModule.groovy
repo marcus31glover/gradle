@@ -96,6 +96,7 @@ class IvyFileModule extends AbstractModule implements IvyModule {
         this.m2Compatible = m2Compatible
         configurations['runtime'] = [extendsFrom: [], transitive: true, visibility: 'public']
         configurations['compile'] = [extendsFrom: [], transitive: true, visibility: 'public']
+        configurations['default'] = [extendsFrom: ['compile,runtime'], transitive: true, visibility: 'public']
     }
 
     @Override

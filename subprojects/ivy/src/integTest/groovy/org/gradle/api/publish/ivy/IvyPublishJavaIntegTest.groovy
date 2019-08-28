@@ -1134,6 +1134,7 @@ class IvyPublishJavaIntegTest extends AbstractIvyPublishIntegTest {
 
             components.java.addVariantsFromConfiguration(configurations.optionalFeatureRuntimeElements) {
                 if ($optional) it.mapToOptional()
+                it.mapToMavenScope('runtime')
             }
 
             publishing {
@@ -1162,9 +1163,9 @@ class IvyPublishJavaIntegTest extends AbstractIvyPublishIntegTest {
             configurations["runtime"].extend == null
             configurations["optionalFeatureRuntimeElements"].extend == null
 
-            expectArtifact("publishTest", "jar").hasConf(["compile"])
+            expectArtifact("publishTest", "jar").hasConf(["compile", "runtime"])
             expectArtifact("publishTest", "jar", "optional-feature").hasConf(["optionalFeatureRuntimeElements"])
-            assertConfigurationDependsOn("optionalFeatureRuntimeElements", "org.slf4j:slf4j-api:1.7.26")
+            assertConfigurationDependsOn("optionalFeatureRuntimeElements->runtime", "org.slf4j:slf4j-api:1.7.26")
         }
 
         where:

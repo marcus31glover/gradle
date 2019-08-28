@@ -115,7 +115,8 @@ class IvyDescriptor {
         assert dependencies.size() == expected.length
         expected.each {
             String key = StringUtils.substringBefore(it, "@")
-            String conf = StringUtils.substringAfter(it, "@") + "->default"
+            String conf = StringUtils.substringAfter(it, "@")
+            conf += "->" + conf
             assert dependencies.containsKey(key)
             assert dependencies[key].hasConf(conf)
         }
@@ -126,7 +127,7 @@ class IvyDescriptor {
         def actualDependencies = dependencies.values().findAll { it.conf.contains(configuration) }
         assert actualDependencies.size() == expected.length
         expected.each {
-            String conf = "$configuration->default"
+            String conf = configuration.contains('->') ? configuration : "$configuration->$configuration"
             assert dependencies.containsKey(it)
             assert dependencies[it].hasConf(conf)
         }
